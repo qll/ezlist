@@ -34,10 +34,10 @@ class IMAPInbox:
         if self.ssl:
             self.imap = imaplib.IMAP4_SSL(self.host, self.port)
         elif self.startssl:
-            self.imap = smtplib.IMAP4(self.host, self.port)
+            self.imap = imaplib.IMAP4(self.host, self.port)
             self.imap.starttls()
         else:
-            self.imap = smtplib.IMAP4(self.host, self.port)
+            self.imap = imaplib.IMAP4(self.host, self.port)
         self.imap.login(self.username, self.password)
         self.imap.select(mailbox=self.inbox)
         return self
@@ -284,8 +284,8 @@ class Manager:
         self.sender.send(addr, mail)
 
     def send_deletion_key(self, addr):
-        if (not self.storage.is_subscribed(addr)
-                or not self.manage_subscriptions):
+        if (not self.storage.is_subscribed(addr) or
+                not self.manage_subscriptions):
             return
         deletion_key = self.storage.get_deletion_key(addr)
         mail_text = self.DELETION_KEY_MAIL_TEXT.format(list=self.mail_addr)
@@ -335,11 +335,11 @@ class Manager:
                     subject = mail.get('Subject').strip()
                     if not self.is_directed_at_list(mail):
                         pass
-                    elif subject == 'subscribe':
+                    elif subject.lower() == 'subscribe':
                         self.subscribe(sender)
                     elif re.search('verify ' + self.KEY_REGEX, subject):
                         self.verify(sender, subject)
-                    elif subject == 'unsubscribe':
+                    elif subject.lower() == 'unsubscribe':
                         self.send_deletion_key(sender)
                     elif re.search('unsubscribe ' + self.KEY_REGEX, subject):
                         self.unsubscribe(sender, subject)
@@ -394,7 +394,9 @@ def _load_settings(settings_path):
 
 
 def _instantiate(class_, kwargs):
-    return globals()[class_](**kwargs)
+    if isinstance(class_, str):
+        return globals()[class_](**kwargs)
+    return class_
 
 
 if __name__ == '__main__':
