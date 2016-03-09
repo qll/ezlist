@@ -5,6 +5,7 @@ MANAGER_CLASS = 'Manager'
 MANAGER_ARGS = {
     'mail_addr': 'mailinglist@anything.com',
     'manage_subscriptions': True,
+    'skip_sender': True,
     'subject_prefix': '[List]',
 }
 

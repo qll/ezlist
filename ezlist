@@ -194,12 +194,14 @@ class Manager:
     )
 
     def __init__(self, mail_addr, inbox, sender, storage,
-                 subject_prefix='[List]', manage_subscriptions=True):
+                 subject_prefix='[List]', skip_sender=True,
+                 manage_subscriptions=True):
         self.mail_addr = mail_addr
         self.inbox = inbox
         self.sender = sender
         self.storage = storage
         self.subject_prefix = subject_prefix
+        self.skip_sender = skip_sender
         self.manage_subscriptions = manage_subscriptions
 
     def _extract_mail_addrs(self, header_value):
@@ -328,7 +330,7 @@ class Manager:
         mail.replace_header('Subject', '{} {}'.format(self.subject_prefix,
                                                       subject))
         for subscriber in self.storage.get_subscribers():
-            if subscriber not in exclude:
+            if not (self.skip_sender and subscriber in exclude):
                 self.sender.send(subscriber, mail)
 
     def process(self):
