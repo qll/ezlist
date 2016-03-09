@@ -321,6 +321,7 @@ class Manager:
     def forward(self, mail, exclude=[]):
         logging.info('Forward %s', self._desc_mail(mail))
         self._clean_mail(mail)
+        mail.add_header('List-Post', '<mailto:%s>' % self.mail_addr)
         mail.replace_header('Subject', '{} {}'.format(self.subject_prefix,
                                                       mail['Subject']))
         for subscriber in self.storage.get_subscribers():
