@@ -82,7 +82,7 @@ class SMTPInboxTest(unittest.TestCase):
         smtp.assert_not_called()
         with sender:
             smtp.assert_not_called()  # lazy connect
-            sender.send('recipient@test.com', _build_mail())
+            sender.send('sender@test.com', 'recipient@test.com', _build_mail())
             smtp.assert_called_once_with('localhost', 7357, 'test.de')
         smtp.return_value.quit.assert_called_once_with()
 
@@ -92,7 +92,7 @@ class SMTPInboxTest(unittest.TestCase):
         smtp_ssl.assert_not_called()
         with sender:
             smtp_ssl.assert_not_called()  # lazy connect
-            sender.send('recipient@test.com', _build_mail())
+            sender.send('sender@test.com', 'recipient@test.com', _build_mail())
             smtp_ssl.assert_called_once_with('localhost', 7357, 'test.de')
         smtp_ssl.return_value.quit.assert_called_once_with()
 
@@ -102,7 +102,7 @@ class SMTPInboxTest(unittest.TestCase):
         smtp.assert_not_called()
         with sender:
             smtp.assert_not_called()  # lazy connect
-            sender.send('recipient@test.com', _build_mail())
+            sender.send('sender@test.com', 'recipient@test.com', _build_mail())
             smtp.assert_called_once_with('localhost', 7357, 'test.de')
             smtp.return_value.starttls.assert_called_once_with()
         smtp.return_value.quit.assert_called_once_with()
@@ -113,7 +113,7 @@ class SMTPInboxTest(unittest.TestCase):
         smtp_ssl.assert_not_called()
         with sender:
             smtp_ssl.assert_not_called()  # lazy connect
-            sender.send('recipient@test.com', _build_mail())
+            sender.send('sender@test.com', 'recipient@test.com', _build_mail())
             smtp_ssl.assert_called_once_with('localhost', 7357, 'test.de')
         smtp_ssl.return_value.quit.assert_called_once_with()
 
@@ -200,7 +200,7 @@ class ManagerTest(unittest.TestCase):
         self.assertTrue(len(key) > 12)
         self.assertTrue(manager.storage.is_unverified(self.EMAIL, key))
         self.assertTrue(manager.sender.send.called)
-        mail = manager.sender.send.call_args[0][1]
+        mail = manager.sender.send.call_args[0][2]
         self.assertTrue(mail['Subject'].startswith(self.SUBJECT_PREFIX))
         self.assertTrue(key in mail['Subject'])
         self.assertTrue(self.EMAIL in mail['To'])
@@ -246,7 +246,7 @@ class ManagerTest(unittest.TestCase):
         manager.storage.add_subscriber(self.EMAIL, self.KEY)
         manager.send_deletion_key(self.EMAIL)
         self.assertTrue(manager.sender.send.called)
-        mail = manager.sender.send.call_args[0][1]
+        mail = manager.sender.send.call_args[0][2]
         self.assertTrue(self.KEY in mail['Subject'])
 
     def test_send_deletion_key_not_subscribed(self):
@@ -286,7 +286,7 @@ class ManagerTest(unittest.TestCase):
         manager.forward(self.EMAIL, mail)
         self.assertEqual(2, manager.sender.send.call_count)
         # have all subscribers been notified?
-        addrs = set(call[0][0] for call in manager.sender.send.call_args_list)
+        addrs = set(call[0][1] for call in manager.sender.send.call_args_list)
         self.assertEqual({self.EMAIL, self.EMAIL2}, addrs)
 
     def test_forward_headers(self):
@@ -297,7 +297,7 @@ class ManagerTest(unittest.TestCase):
         mail.add_header('Reply-To', self.EMAIL)
         mail.add_header('X-Custom-Header', 'test')
         manager.forward(self.EMAIL, mail)
-        mail = manager.sender.send.call_args[0][1]
+        mail = manager.sender.send.call_args[0][2]
         self.assertTrue(self.LIST_EMAIL in mail['List-Post'])
         self.assertEqual(self.EMAIL, mail['Reply-To'])
         self.assertEqual('test', mail['Date'])
@@ -310,7 +310,7 @@ class ManagerTest(unittest.TestCase):
         manager.forward(self.EMAIL, _build_mail(to=self.LIST_EMAIL),
                         exclude=[self.EMAIL])
         self.assertEqual(1, manager.sender.send.call_count)
-        self.assertEqual(self.EMAIL2, manager.sender.send.call_args[0][0])
+        self.assertEqual(self.EMAIL2, manager.sender.send.call_args[0][1])
 
     def test_forward_list_prefix(self):
         manager = self.build_manager()
@@ -318,20 +318,20 @@ class ManagerTest(unittest.TestCase):
 
         mail = _build_mail(to=self.LIST_EMAIL, subject='Test')
         manager.forward(self.EMAIL, mail)
-        mail = manager.sender.send.call_args[0][1]
+        mail = manager.sender.send.call_args[0][2]
         self.assertEqual('%s Test' % self.SUBJECT_PREFIX, mail['Subject'])
 
         subject = 'Test %s' % self.SUBJECT_PREFIX
         mail = _build_mail(to=self.LIST_EMAIL, subject=subject)
         manager.forward(self.EMAIL, mail)
-        mail = manager.sender.send.call_args[0][1]
+        mail = manager.sender.send.call_args[0][2]
         self.assertEqual('%s %s' % (self.SUBJECT_PREFIX, subject),
                          mail['Subject'])
 
         subject = 'Re: Aw: Re: %s Test Prefix after Re:' % self.SUBJECT_PREFIX
         mail = _build_mail(to=self.LIST_EMAIL, subject=subject)
         manager.forward(self.EMAIL, mail)
-        mail = manager.sender.send.call_args[0][1]
+        mail = manager.sender.send.call_args[0][2]
         self.assertEqual(subject, mail['Subject'])
 
     def test_forward_not_subscribed(self):
@@ -430,7 +430,7 @@ class ManagerTest(unittest.TestCase):
         self.assertTrue(manager.sender.send.called)
 
         # verification step (replying to the mail)
-        mail = manager.sender.send.call_args[0][1]
+        mail = manager.sender.send.call_args[0][2]
         mail.replace_header('Subject', 'Re: %s' % mail['Subject'])
         mail.replace_header('From', self.EMAIL)
         mail.replace_header('To', self.LIST_EMAIL)
@@ -447,7 +447,7 @@ class ManagerTest(unittest.TestCase):
         manager.process()
         # when skipping the sender, there is one person left to mail
         self.assertEqual(3, manager.sender.send.call_count)
-        mail = manager.sender.send.call_args[0][1]
+        mail = manager.sender.send.call_args[0][2]
         self.assertEqual('%s %s' % (self.SUBJECT_PREFIX, subject),
                          mail['Subject'])
 
@@ -459,7 +459,7 @@ class ManagerTest(unittest.TestCase):
         self.assertEqual(4, manager.sender.send.call_count)
 
         # reply to fully unsubscribe
-        mail = manager.sender.send.call_args[0][1]
+        mail = manager.sender.send.call_args[0][2]
         mail.replace_header('Subject', 'Re: %s' % mail['Subject'])
         mail.replace_header('From', self.EMAIL)
         mail.replace_header('To', self.LIST_EMAIL)

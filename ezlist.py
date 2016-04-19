@@ -97,14 +97,14 @@ class SMTPSender:
                 self.smtp = smtplib.SMTP(self.host, self.port, self.domain)
             self.smtp.login(self.username, self.password)
 
-    def send(self, to, mail):
+    def send(self, from_, to, mail):
         """Send mail. Connect lazily if required."""
         self._connect()
         try:
-            self.smtp.sendmail(mail['From'], to, mail.as_string())
+            self.smtp.sendmail(from_, to, mail.as_string())
         except smtplib.SMTPServerDisconnected:
             self.smtp = None
-            self.send(to, mail)
+            self.send(from_, to, mail)
 
 
 class SQLiteStorage:
@@ -288,7 +288,7 @@ class Manager:
         mail_text = self.SUBSCRIPTION_MAIL_TEXT.format(list=self.mail_addr)
         mail_subj = 'verify <{}>'.format(activation_key)
         mail = self._create_mail(self.mail_addr, addr, mail_subj, mail_text)
-        self.sender.send(addr, mail)
+        self.sender.send(self.mail_addr, addr, mail)
 
     @assert_managing_subscriptions
     def verify(self, addr, activation_key):
@@ -310,7 +310,7 @@ class Manager:
                                                        key=deletion_key)
         mail_subj = 'You have successfully joined the mailing list'
         mail = self._create_mail(self.mail_addr, addr, mail_subj, mail_text)
-        self.sender.send(addr, mail)
+        self.sender.send(self.mail_addr, addr, mail)
 
     @assert_is_subscriber
     @assert_managing_subscriptions
@@ -319,7 +319,7 @@ class Manager:
         mail_text = self.DELETION_KEY_MAIL_TEXT.format(list=self.mail_addr)
         mail_subj = 'unsubscribe <{}>'.format(deletion_key)
         mail = self._create_mail(self.mail_addr, addr, mail_subj, mail_text)
-        self.sender.send(addr, mail)
+        self.sender.send(self.mail_addr, addr, mail)
 
     @assert_is_subscriber
     @assert_managing_subscriptions
@@ -335,7 +335,7 @@ class Manager:
         mail_text = self.UNSUBSCRIBE_MAIL_TEXT.format(list=self.mail_addr)
         mail_subj = 'You have successfully unsubscribed from this list'
         mail = self._create_mail(self.mail_addr, addr, mail_subj, mail_text)
-        self.sender.send(addr, mail)
+        self.sender.send(self.mail_addr, addr, mail)
 
     @assert_is_subscriber
     def forward(self, addr, mail, exclude=set()):
@@ -348,7 +348,7 @@ class Manager:
                                                       subject))
         for subscriber in self.storage.get_subscribers():
             if subscriber not in exclude:
-                self.sender.send(subscriber, mail)
+                self.sender.send(self.mail_addr, subscriber, mail)
 
     def process(self):
         with self.inbox, self.sender:
