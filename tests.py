@@ -328,7 +328,7 @@ class ManagerTest(unittest.TestCase):
         self.assertEqual('%s %s' % (self.SUBJECT_PREFIX, subject),
                          mail['Subject'])
 
-        subject = 'Re: Aw: Re: %s Test Prefix after Re:' % self.SUBJECT_PREFIX
+        subject = 'Re: Aw: Fwd: %s Test Prefix after Re:' % self.SUBJECT_PREFIX
         mail = _build_mail(to=self.LIST_EMAIL, subject=subject)
         manager.forward(self.EMAIL, mail)
         mail = manager.sender.send.call_args[0][2]

@@ -197,7 +197,7 @@ def assert_is_subscriber(func):
 class Manager:
     VERIFY_REGEX = re.compile(r'verify <([A-Za-z0-9+=/]+?)>')
     UNSUBSCRIBE_REGEX = re.compile(r'unsubscribe <([A-Za-z0-9+=/]+?)>')
-    CLEAN_SUBJECT_REGEX = re.compile(r'^(?:\w{2}:\s*)*(.+)$')
+    CLEAN_SUBJECT_REGEX = re.compile(r'^(?:\w{2,3}:\s*)*(.+)$')
     SUBSCRIPTION_MAIL_TEXT = (
         'Cheers!\n\n'
         'Were you trying to subscribe to the mailing list found at {list}? If '
