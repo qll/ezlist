@@ -1,10 +1,32 @@
 # ezlist #
-If you have been looking for a mailing list manager, you know the problem:
-Either you use extremely overfeatured software like mailman or you end up with a
-strange PHP script somebody hacked together. I hope that ezlist will some day be
-a real alternative for those who do not have to manage a huge mailing list and
-do not require many of the more advanced features of such software. However,
-right now ezlist is strictly experimental albeit working. I will write
-documentation at a later point...
+Looking for a dead simple mailing list manager? No GUI, no website and working
+out-of-the-box with a standard IMAP/SMTP mailbox? Look no more, this is it.
 
-This script requires Python 3 to work properly.
+Here is what it does for you:
+
+- Manage subscriptions/unsubscriptions (or not if you tell it to)
+- Forward subscriber emails to list (aka the core functionality)
+- Work from a single mail address (could be yourstupidlist@gmail.com)
+
+Here are a few things it does *not* do for you:
+
+- Moderation of list
+- Fancy web interface
+- Deleting "dead" subscribers on bounce (or VERP if you're super pro)
+
+Any of those features have to be written by yourself. This makes this software
+only useful in small and controlled environments where you don't shy away from
+writing a script yourself. Many parts can be easily replaced via configuration
+and I will soon add examples of how to do so.
+
+
+## Installation ##
+You need to have Python 3 and that's it. Simply clone this repository, change
+the configuration to your liking and start the mailing list.
+
+```sh
+# either look for a settings.py in the same dir
+./ezlist.py
+# or
+./ezlist.py -s somewhere/are/the/settings.py
+```
