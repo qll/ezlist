@@ -253,7 +253,7 @@ class Manager:
     def _clean_mail(self, mail):
         """Delete unknown header fields but do not destroy the message"""
         whitelist = ('From', 'To', 'Subject', 'Date', 'Reply-To',
-                     'Content-Type', 'Content-Transfer-Encoding')
+                     'Content-Type', 'Content-Transfer-Encoding', 'Message-ID')
         for header in mail.keys():
             if header not in whitelist:
                 del mail[header]

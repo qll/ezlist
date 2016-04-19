@@ -294,6 +294,8 @@ class ManagerTest(unittest.TestCase):
         manager.storage.add_subscriber(self.EMAIL, self.KEY)
         mail = _build_mail(to=self.LIST_EMAIL)
         mail.add_header('Date', 'test')
+        msgid = '<56EFCAED.3060009@test.de>'
+        mail.add_header('Message-ID', msgid)
         mail.add_header('Reply-To', self.EMAIL)
         mail.add_header('X-Custom-Header', 'test')
         manager.forward(self.EMAIL, mail)
@@ -301,6 +303,7 @@ class ManagerTest(unittest.TestCase):
         self.assertTrue(self.LIST_EMAIL in mail['List-Post'])
         self.assertEqual(self.EMAIL, mail['Reply-To'])
         self.assertEqual('test', mail['Date'])
+        self.assertEqual(msgid, mail['Message-ID'])
         self.assertFalse('X-Custom-Header' in mail)
 
     def test_forward_exclude(self):
