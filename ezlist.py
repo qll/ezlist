@@ -31,6 +31,7 @@ class IMAPInbox:
         self.imap = None
 
     def __enter__(self):
+        """Connect to the IMAP server."""
         if self.ssl:
             self.imap = imaplib.IMAP4_SSL(self.host, self.port)
         elif self.startssl:
@@ -43,12 +44,14 @@ class IMAPInbox:
         return self
 
     def __exit__(self, type, value, traceback):
+        """Disconnect from the IMAP server."""
         # remove deleted messages from mailbox
         self.imap.close()
         # be nice and say BYE to the server
         self.imap.logout()
 
     def fetch_all(self):
+        """Fetch all mail from the inbox."""
         _, data = self.imap.search(None, 'ALL')
         for mail_id in data[0].decode().split(' '):
             if mail_id:
@@ -56,6 +59,7 @@ class IMAPInbox:
                 yield mail_id, email.message_from_bytes(data[0][1])
 
     def delete(self, mail_id):
+        """Mark a mail as deleted."""
         self.imap.store(mail_id, '+FLAGS', '\\Deleted')
 
 
@@ -82,17 +86,19 @@ class SMTPSender:
             pass
 
     def _connect(self):
+        """Connect to the SMTP server."""
         if self.smtp is None:
-            if self.startssl:
+            if self.ssl:
+                self.smtp = smtplib.SMTP_SSL(self.host, self.port, self.domain)
+            elif self.startssl:
                 self.smtp = smtplib.SMTP(self.host, self.port, self.domain)
                 self.smtp.starttls()
-            elif self.ssl:
-                self.smtp = smtplib.SMTP_SSL(self.host, self.port, self.domain)
             else:
                 self.smtp = smtplib.SMTP(self.host, self.port, self.domain)
             self.smtp.login(self.username, self.password)
 
     def send(self, to, mail):
+        """Send mail. Connect lazily if required."""
         self._connect()
         try:
             self.smtp.sendmail(mail['From'], to, mail.as_string())
@@ -164,8 +170,34 @@ class SQLiteStorage:
         return (i[0] for i in self._query('SELECT email FROM subscribers'))
 
 
+class UserError(Exception):
+    pass
+
+
+def assert_managing_subscriptions(func):
+    """Assert that manage_subscriptions has been enabled."""
+    def wrapper(self, *args, **kwargs):
+        if not self.manage_subscriptions:
+            raise UserError('Blocked %s %s %s: Subscription managment disabled'
+                            % (func.__name__, args, kwargs))
+        return func(self, *args, **kwargs)
+    return wrapper
+
+
+def assert_is_subscriber(func):
+    """Assert that first arg is a valid subscriber."""
+    def wrapper(self, addr, *args, **kwargs):
+        if not self.storage.is_subscribed(addr):
+            raise UserError('Blocked %s %s %s: E-Mail is not a subscriber'
+                            % (func.__name__, args, kwargs))
+        return func(self, addr, *args, **kwargs)
+    return wrapper
+
+
 class Manager:
-    KEY_REGEX = r'<([A-Za-z0-9+=/]+?)>'
+    VERIFY_REGEX = re.compile(r'verify <([A-Za-z0-9+=/]+?)>')
+    UNSUBSCRIBE_REGEX = re.compile(r'unsubscribe <([A-Za-z0-9+=/]+?)>')
+    CLEAN_SUBJECT_REGEX = re.compile(r'^(?:\w{2}:\s*)*(.+)$')
     SUBSCRIPTION_MAIL_TEXT = (
         'Cheers!\n\n'
         'Were you trying to subscribe to the mailing list found at {list}? If '
@@ -240,97 +272,82 @@ class Manager:
         return any(self.mail_addr == addr
                    for addr in self._extract_mail_addrs(mail.get('To')))
 
+    @assert_managing_subscriptions
     def subscribe(self, addr):
         if self.storage.is_subscribed(addr):
-            logging.warning('Subscription attempt from %s, although already '
-                            'subscribed', addr)
-            return
-        if not self.manage_subscriptions:
-            logging.warning('Subscription attempt from %s, although '
-                            'subscriptions are turned off', addr)
-            return
+            raise UserError('Subscription attempt from %s, although already '
+                            'subscribed' % addr)
         logging.info('%s is now unverified', addr)
         activation_key = self._create_unique_key()
         logging.debug('%s has activation_key %s', addr, activation_key)
         self.storage.add_unverified(addr, activation_key)
-        self.send_subscription_mail(addr, activation_key)
+        self._send_subscription_mail(addr, activation_key)
+        return activation_key
 
-    def send_subscription_mail(self, addr, activation_key):
+    def _send_subscription_mail(self, addr, activation_key):
         mail_text = self.SUBSCRIPTION_MAIL_TEXT.format(list=self.mail_addr)
         mail_subj = 'verify <{}>'.format(activation_key)
         mail = self._create_mail(self.mail_addr, addr, mail_subj, mail_text)
         self.sender.send(addr, mail)
 
-    def verify(self, addr, subject):
+    @assert_managing_subscriptions
+    def verify(self, addr, activation_key):
         if self.storage.is_subscribed(addr):
-            logging.warning('Verification attempt from %s, although already '
-                            'verified', addr)
-            return
-        activation_key = re.search(self.KEY_REGEX, subject).group(1)
-        logging.debug('Verification attempt with activation_key %s',
-                      activation_key)
-        if self.storage.is_unverified(addr, activation_key):
-            self.storage.delete_unverified(addr)
-            deletion_key = self._create_unique_key()
-            self.storage.add_subscriber(addr, deletion_key)
-            logging.info('%s is now a subscriber', addr)
-            self.send_verification_mail(addr, deletion_key)
-        else:
-            logging.warning('%s failed at verifying his subscription', addr)
+            raise UserError('Verification attempt from %s, although already '
+                            'verified' % addr)
+        if not self.storage.is_unverified(addr, activation_key):
+            raise UserError('Verification for %s failed because of wrong '
+                            'activation_key (%s)' % (addr, activation_key))
+        deletion_key = self._create_unique_key()
+        self.storage.add_subscriber(addr, deletion_key)
+        logging.info('%s is now a subscriber', addr)
+        self.storage.delete_unverified(addr)
+        self._send_verification_mail(addr, deletion_key)
+        return deletion_key
 
-    def send_verification_mail(self, addr, deletion_key):
+    def _send_verification_mail(self, addr, deletion_key):
         mail_text = self.VERIFICATION_MAIL_TEXT.format(list=self.mail_addr,
                                                        key=deletion_key)
         mail_subj = 'You have successfully joined the mailing list'
         mail = self._create_mail(self.mail_addr, addr, mail_subj, mail_text)
         self.sender.send(addr, mail)
 
+    @assert_is_subscriber
+    @assert_managing_subscriptions
     def send_deletion_key(self, addr):
-        if (not self.storage.is_subscribed(addr) or
-                not self.manage_subscriptions):
-            return
         deletion_key = self.storage.get_deletion_key(addr)
         mail_text = self.DELETION_KEY_MAIL_TEXT.format(list=self.mail_addr)
         mail_subj = 'unsubscribe <{}>'.format(deletion_key)
         mail = self._create_mail(self.mail_addr, addr, mail_subj, mail_text)
         self.sender.send(addr, mail)
 
-    def unsubscribe(self, addr, subject):
-        if not self.storage.is_subscribed(addr):
-            logging.warning('Unsubscribing %s impossible - already '
-                            'unsubscribed', addr)
-            return
-        if not self.manage_subscriptions:
-            logging.warning('Unsubscription attempt from %s, although '
-                            'unsubscriptions are turned off', addr)
-            return
-        deletion_key = re.search(self.KEY_REGEX, subject).group(1)
-        logging.debug('Unsubscribe attempt with deletion_key %s',
-                      deletion_key)
-        if self.storage.is_subscribed(addr, deletion_key):
-            self.storage.delete_subscriber(addr)
-            logging.info('Unsubscribing %s', addr)
-            self.send_unsubscribe_mail(addr)
-        else:
-            logging.warning('%s failed at unsubscribing', addr)
+    @assert_is_subscriber
+    @assert_managing_subscriptions
+    def unsubscribe(self, addr, deletion_key):
+        if not self.storage.is_subscribed(addr, deletion_key):
+            raise UserError('Unsubscription for %s failed because of wrong '
+                            'deletion_key (%s)' % (addr, deletion_key))
+        self.storage.delete_subscriber(addr)
+        logging.info('Unsubscribing %s', addr)
+        self._send_unsubscribe_mail(addr)
 
-    def send_unsubscribe_mail(self, addr):
+    def _send_unsubscribe_mail(self, addr):
         mail_text = self.UNSUBSCRIBE_MAIL_TEXT.format(list=self.mail_addr)
         mail_subj = 'You have successfully unsubscribed from this list'
         mail = self._create_mail(self.mail_addr, addr, mail_subj, mail_text)
         self.sender.send(addr, mail)
 
-    def forward(self, mail, exclude=[]):
+    @assert_is_subscriber
+    def forward(self, addr, mail, exclude=set()):
         logging.info('Forward %s', self._desc_mail(mail))
         self._clean_mail(mail)
         mail.add_header('List-Post', '<mailto:%s>' % self.mail_addr)
-        # remove the subject_prefix with or without a space
-        subject = mail['subject'].replace(self.subject_prefix + ' ', '')
-        subject = subject.replace(self.subject_prefix, '')
-        mail.replace_header('Subject', '{} {}'.format(self.subject_prefix,
+        subject = self.CLEAN_SUBJECT_REGEX.search(mail['Subject']).group(1)
+        if not subject.strip().startswith(self.subject_prefix):
+            mail.replace_header('Subject', '%s %s' % (self.subject_prefix,
                                                       subject))
         for subscriber in self.storage.get_subscribers():
-            if not (self.skip_sender and subscriber in exclude):
+            if subscriber not in exclude:
                 self.sender.send(subscriber, mail)
 
     def process(self):
@@ -343,17 +360,20 @@ class Manager:
                         pass
                     elif subject.lower() == 'subscribe':
                         self.subscribe(sender)
-                    elif re.search('verify ' + self.KEY_REGEX, subject):
-                        self.verify(sender, subject)
                     elif subject.lower() == 'unsubscribe':
                         self.send_deletion_key(sender)
-                    elif re.search('unsubscribe ' + self.KEY_REGEX, subject):
-                        self.unsubscribe(sender, subject)
-                    elif self.storage.is_subscribed(sender):
-                        self.forward(mail, exclude=[sender])
+                    elif self.VERIFY_REGEX.search(subject):
+                        match = self.VERIFY_REGEX.search(subject)
+                        self.verify(sender, match.group(1))
+                    elif self.UNSUBSCRIBE_REGEX.search(subject):
+                        match = self.UNSUBSCRIBE_REGEX.search(subject)
+                        self.unsubscribe(sender, match.group(1))
                     else:
-                        logging.info('Ignore %s', self._desc_mail(mail))
+                        exclude = [sender] if self.skip_sender else []
+                        self.forward(sender, mail, exclude=exclude)
                     self.inbox.delete(mail_id)
+                except UserError as error:
+                    logging.warning(str(error))
                 except:
                     logging.exception('Exception while processing %s',
                                       self._desc_mail(mail))
