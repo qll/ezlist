@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# coding: utf-8
 import email.mime.text
 import ezlist
 import unittest
