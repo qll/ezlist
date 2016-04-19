@@ -399,15 +399,30 @@ def _parse_cmdline():
 def _load_settings(settings_path):
     defaults = {
         'POLLING_INTERVAL': 30,
-        'INBOX_CLASS': 'IMAPInbox',
-        'SENDER_CLASS': 'SMTPSender',
-        'STORAGE_CLASS': 'SQLiteStorage',
-        'MANAGER_CLASS': 'Manager',
-        # classes have sensible defaults + better error messages
-        'INBOX_ARGS': {},
-        'SENDER_ARGS': {},
-        'STORAGE_ARGS': {},
-        'MANAGER_ARGS': {},
+        'LOGGING': {
+            'version': 1,
+            'disable_existing_loggers': False,
+            'formatters': {
+                'standard': {
+                    'format': '[%(levelname)s]%(asctime)s: %(message)s',
+                    'datefmt': '%d.%m.%Y/%H:%S',
+                },
+            },
+            'handlers': {
+                'default': {
+                    'level': 'DEBUG',
+                    'class': 'logging.StreamHandler',
+                    'formatter': 'standard'
+                },
+            },
+            'loggers': {
+                '': {
+                    'handlers': ['default'],
+                    'level': 'DEBUG',
+                    'propagate': True
+                }
+            }
+        }
     }
     user_settings = {}
     with open(settings_path) as settings_file:
@@ -419,21 +434,8 @@ def _load_settings(settings_path):
     return defaults
 
 
-def _instantiate(class_, kwargs):
-    if isinstance(class_, str):
-        return globals()[class_](**kwargs)
-    return class_
-
-
 if __name__ == '__main__':
     args = _parse_cmdline()
     settings = _load_settings(args.settings)
-    inbox = _instantiate(settings['INBOX_CLASS'], settings['INBOX_ARGS'])
-    sender = _instantiate(settings['SENDER_CLASS'], settings['SENDER_ARGS'])
-    storage = _instantiate(settings['STORAGE_CLASS'], settings['STORAGE_ARGS'])
-    settings['MANAGER_ARGS']['inbox'] = inbox
-    settings['MANAGER_ARGS']['sender'] = sender
-    settings['MANAGER_ARGS']['storage'] = storage
-    manager = _instantiate(settings['MANAGER_CLASS'], settings['MANAGER_ARGS'])
     logging.config.dictConfig(settings['LOGGING'])
-    main(settings['POLLING_INTERVAL'], manager)
+    main(settings['POLLING_INTERVAL'], settings['MANAGER'])
