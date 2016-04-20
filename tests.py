@@ -193,6 +193,12 @@ class ManagerTest(unittest.TestCase):
         self.assertFalse(manager.is_directed_at_list(mail))
         mail = _build_mail(to='Mailinglist <%s>' % self.LIST_EMAIL)
         self.assertTrue(manager.is_directed_at_list(mail))
+        mail = _build_mail(to=self.EMAIL)
+        mail.add_header('Cc', self.LIST_EMAIL)
+        self.assertTrue(manager.is_directed_at_list(mail))
+        mail = _build_mail(to=self.EMAIL)
+        mail.add_header('Bcc', self.LIST_EMAIL)
+        self.assertTrue(manager.is_directed_at_list(mail))
 
     def test_subscribe(self):
         manager = self.build_manager()
@@ -295,7 +301,6 @@ class ManagerTest(unittest.TestCase):
         mail = _build_mail(to=self.LIST_EMAIL)
         mail.add_header('Date', 'test')
         msgid = '<56EFCAED.3060009@test.de>'
-        mail.add_header('Message-ID', msgid)
         mail.add_header('Reply-To', self.EMAIL)
         mail.add_header('X-Custom-Header', 'test')
         manager.forward(self.EMAIL, mail)
@@ -303,7 +308,6 @@ class ManagerTest(unittest.TestCase):
         self.assertTrue(self.LIST_EMAIL in mail['List-Post'])
         self.assertEqual(self.EMAIL, mail['Reply-To'])
         self.assertEqual('test', mail['Date'])
-        self.assertEqual(msgid, mail['Message-ID'])
         self.assertFalse('X-Custom-Header' in mail)
 
     def test_forward_exclude(self):

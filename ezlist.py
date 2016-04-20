@@ -253,7 +253,7 @@ class Manager:
     def _clean_mail(self, mail):
         """Delete unknown header fields but do not destroy the message"""
         whitelist = ('From', 'To', 'Subject', 'Date', 'Reply-To',
-                     'Content-Type', 'Content-Transfer-Encoding', 'Message-ID')
+                     'Content-Type', 'Content-Transfer-Encoding')
         for header in mail.keys():
             if header not in whitelist:
                 del mail[header]
@@ -269,8 +269,11 @@ class Manager:
         return base64.b64encode(os.urandom(16)).decode()
 
     def is_directed_at_list(self, mail):
+        addrs = (self._extract_mail_addrs(mail.get('To')) +
+                 self._extract_mail_addrs(mail.get('Cc', '')) +
+                 self._extract_mail_addrs(mail.get('Bcc', '')))
         return any(self.mail_addr == addr
-                   for addr in self._extract_mail_addrs(mail.get('To')))
+                   for addr in addrs)
 
     @assert_managing_subscriptions
     def subscribe(self, addr):
