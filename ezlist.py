@@ -237,6 +237,8 @@ class Manager:
         self.manage_subscriptions = manage_subscriptions
 
     def _extract_mail_addrs(self, header_value):
+        if header_value is None:
+            return []
         # let's not allow too fancy mail addresses
         return re.findall(r'[\w.%+-]+@[\w.%+-]+', header_value)
 
