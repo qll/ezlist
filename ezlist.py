@@ -178,8 +178,12 @@ def assert_managing_subscriptions(func):
     """Assert that manage_subscriptions has been enabled."""
     def wrapper(self, *args, **kwargs):
         if not self.manage_subscriptions:
+            printable_args = [(self._desc_mail(obj)
+                               if isinstance(obj, email.message.Message) else
+                               obj)
+                              for obj in args]
             raise UserError('Blocked %s %s %s: Subscription managment disabled'
-                            % (func.__name__, args, kwargs))
+                            % (func.__name__, printable_args, kwargs))
         return func(self, *args, **kwargs)
     return wrapper
 
@@ -188,8 +192,12 @@ def assert_is_subscriber(func):
     """Assert that first arg is a valid subscriber."""
     def wrapper(self, addr, *args, **kwargs):
         if not self.storage.is_subscribed(addr):
+            printable_args = [(self._desc_mail(obj)
+                               if isinstance(obj, email.message.Message) else
+                               obj)
+                              for obj in args]
             raise UserError('Blocked %s %s %s: E-Mail is not a subscriber'
-                            % (func.__name__, args, kwargs))
+                            % (func.__name__, printable_args, kwargs))
         return func(self, addr, *args, **kwargs)
     return wrapper
 
