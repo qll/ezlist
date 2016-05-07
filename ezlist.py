@@ -388,6 +388,7 @@ class Manager:
                     self.inbox.delete(mail_id)
                 except UserError as error:
                     logging.warning(str(error))
+                    self.inbox.delete(mail_id)
                 except:
                     logging.exception('Exception while processing %s',
                                       self._desc_mail(mail))
