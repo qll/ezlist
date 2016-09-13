@@ -205,7 +205,7 @@ def assert_is_subscriber(func):
 class Manager:
     VERIFY_REGEX = re.compile(r'verify <([A-Za-z0-9+=/]+?)>')
     UNSUBSCRIBE_REGEX = re.compile(r'unsubscribe <([A-Za-z0-9+=/]+?)>')
-    CLEAN_SUBJECT_REGEX = re.compile(r'^(?:\w{2,3}:\s*)*(.+)$')
+    CLEAN_SUBJECT_REGEX = re.compile(r'^(?:\w{2,3}:\s*)*(.*)$')
     SUBSCRIPTION_MAIL_TEXT = (
         'Cheers!\n\n'
         'Were you trying to subscribe to the mailing list found at {list}? If '
@@ -356,10 +356,15 @@ class Manager:
         logging.info('Forward %s', self._desc_mail(mail))
         self._clean_mail(mail)
         mail.add_header('List-Post', '<mailto:%s>' % self.mail_addr)
-        subject = self.CLEAN_SUBJECT_REGEX.search(mail['Subject']).group(1)
-        if not subject.strip().startswith(self.subject_prefix):
-            mail.replace_header('Subject', '%s %s' % (self.subject_prefix,
-                                                      subject))
+        subject = mail.get('Subject')
+        if subject is None:
+            mail.add_header('Subject', '%s (empty subject)'
+                                        % self.subject_prefix)
+        else:
+            clean_subject = self.CLEAN_SUBJECT_REGEX.search(subject).group(1)
+            if not clean_subject.strip().startswith(self.subject_prefix):
+                mail.replace_header('Subject', '%s %s' % (self.subject_prefix,
+                                                          clean_subject))
         for subscriber in self.storage.get_subscribers():
             if subscriber not in exclude:
                 self.sender.send(self.mail_addr, subscriber, mail)
