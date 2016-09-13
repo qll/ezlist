@@ -474,6 +474,18 @@ class ManagerTest(unittest.TestCase):
         manager.process()
         self.assertFalse(manager.storage.is_subscribed(self.EMAIL))
 
+    def test_process_forward_with_empty_subject(self):
+        manager = self.build_manager(skip_sender=False)
+        mail = email.mime.text.MIMEText('irrelevant')
+        mail['From'] = self.EMAIL
+        mail['To'] = self.LIST_EMAIL
+        manager.inbox.fetch_all.return_value = ((1, mail),)
+        manager.forward = mock.MagicMock()
+        manager.process()
+        self.assertEqual(1, manager.forward.call_count)
+        manager.forward.assert_called_once_with(self.EMAIL, mail, exclude=[])
+        manager.inbox.delete.assert_has_calls([mock.call(1)])
+
 
 if __name__ == '__main__':
     unittest.main()

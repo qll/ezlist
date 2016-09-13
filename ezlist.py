@@ -369,7 +369,7 @@ class Manager:
             for mail_id, mail in self.inbox.fetch_all():
                 try:
                     sender = self._get_sender(mail)
-                    subject = mail.get('Subject').strip()
+                    subject = mail.get('Subject', '').strip()
                     if not self.is_directed_at_list(mail):
                         pass
                     elif subject.lower() == 'subscribe':
