@@ -361,10 +361,12 @@ class Manager:
             mail.add_header('Subject', '%s (empty subject)'
                                         % self.subject_prefix)
         else:
-            clean_subject = self.CLEAN_SUBJECT_REGEX.search(subject).group(1)
-            if not clean_subject.strip().startswith(self.subject_prefix):
-                mail.replace_header('Subject', '%s %s' % (self.subject_prefix,
-                                                          clean_subject))
+            subject_match = self.CLEAN_SUBJECT_REGEX.search(subject)
+            if subject_match:
+                clean_subject = subject_match.group(1)
+                if not clean_subject.strip().startswith(self.subject_prefix):
+                    mail.replace_header('Subject', '%s %s'
+                                        % (self.subject_prefix, clean_subject))
         for subscriber in self.storage.get_subscribers():
             if subscriber not in exclude:
                 self.sender.send(self.mail_addr, subscriber, mail)
