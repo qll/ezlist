@@ -1,0 +1,4 @@
+Merhaba,
+{list} eposta listesini takip etmek istediyseniz lütfen bu emaili konusunu değiştirmeden yanıtlayınız.
+Eğer böyle bir talebiniz bulunmuyorsa bu epostayı görmezden gelebilirsiniz.
+Teşekkürler

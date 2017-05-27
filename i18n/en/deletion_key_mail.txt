@@ -1,0 +1,3 @@
+Cheers!
+Do you want to unsubscribe from the mailing list {list}? Simply reply to this mail without touching the subject. In any other case, just ignore and delete this mail.
+Regards.
