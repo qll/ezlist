@@ -1,0 +1,4 @@
+Merhaba,
+Listeden ayrılmak için "unsubscribe <{key}>" konulu bir eposta göndermeniz yeterlidir.
+Eğer anahtarınızı hatırlamıyorsanız, yalnızca "unsubscribe" yazıp gönderirseniz anahtarınızı gönderebiliriz.
+Teşekkürler

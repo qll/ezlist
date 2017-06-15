@@ -30,3 +30,21 @@ the configuration to your liking and start the mailing list.
 # or
 ./ezlist.py -s somewhere/are/the/settings.py
 ```
+
+## Localization for automated emails ##
+You can now use i18n folder to localize your mailing lists responses. All you need to do is creating a new language folder (tr, en) under the i18n folder. Then copy the txt files from en folder to language folder that you want to translate.
+
+In settings.py define your default language.
+```sh
+# a manager implements the core functionality of the mailing list
+MANAGER = Manager(
+    mail_addr='test@gmail.com',  # the address of the mailing list
+    inbox=inbox,
+    sender=sender,
+    storage=storage,
+    subject_prefix='[List]',     # how to prefix all mails on the list
+    skip_sender=True,            # should a sender get his own email forwarded?
+    manage_subscriptions=True,    # subscriptions/unsubscriptions allowed?
+    default_language='tr'        # default language for automated emails
+)
+```

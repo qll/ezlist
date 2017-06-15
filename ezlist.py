@@ -206,36 +206,10 @@ class Manager:
     VERIFY_REGEX = re.compile(r'verify <([A-Za-z0-9+=/]+?)>')
     UNSUBSCRIBE_REGEX = re.compile(r'unsubscribe <([A-Za-z0-9+=/]+?)>')
     CLEAN_SUBJECT_REGEX = re.compile(r'^(?:\w{2,3}:\s*)*(.*)$')
-    SUBSCRIPTION_MAIL_TEXT = (
-        'Cheers!\n\n'
-        'Were you trying to subscribe to the mailing list found at {list}? If '
-        'that\'s exactly what you wanted to do, please reply to this mail and '
-        'do not touch the subject. In any other case, just ignore and delete '
-        'this mail, we hopefully won\'t bother you again.'
-        '\n\nRegards'
-    )
-    VERIFICATION_MAIL_TEXT = (
-        'If you ever want to unsubscribe from the list, send a mail with the '
-        'subject "unsubscribe <{key}>". If you forgot your key, just send '
-        '"unsubscribe" and we will send your key again.'
-    )
-    UNSUBSCRIBE_MAIL_TEXT = (
-        'Cheers!\n\n'
-        'You are no longer part of this mailing list and will stop receiving '
-        'mails.'
-        '\n\nRegards'
-    )
-    DELETION_KEY_MAIL_TEXT = (
-        'Cheers!\n\n'
-        'Do you want to unsubscribe from the mailing list {list}? Simply reply'
-        ' to this mail without touching the subject. In any other case, just '
-        'ignore and delete this mail.'
-        '\n\nRegards'
-    )
 
     def __init__(self, mail_addr, inbox, sender, storage,
                  subject_prefix='[List]', skip_sender=True,
-                 manage_subscriptions=True):
+                 manage_subscriptions=True, default_language='en'):
         self.mail_addr = mail_addr
         self.inbox = inbox
         self.sender = sender
@@ -243,6 +217,13 @@ class Manager:
         self.subject_prefix = subject_prefix
         self.skip_sender = skip_sender
         self.manage_subscriptions = manage_subscriptions
+        self.default_language = default_language
+
+        # automated mail list response emails
+        self.SUBSCRIPTION_MAIL_TEXT = open("./i18n/{0}/subscription_mail.txt".format(self.default_language), 'r').read()
+        self.VERIFICATION_MAIL_TEXT = open("./i18n/{0}/verification_mail.txt".format(self.default_language), 'r').read()
+        self.UNSUBSCRIBE_MAIL_TEXT = open("./i18n/{0}/unsubscribe_mail.txt".format(self.default_language), 'r').read()
+        self.DELETION_KEY_MAIL_TEXT = open("./i18n/{0}/deletion_key_mail.txt".format(self.default_language), 'r').read()
 
     def _extract_mail_addrs(self, header_value):
         if header_value is None:

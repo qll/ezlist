@@ -1,0 +1,4 @@
+Cheers!
+Were you trying to subscribe to the mailing list found at {list}? If that's exactly what you wanted to do, please reply to this mail and do not touch the subject. 
+In any other case, just ignore and delete this mail, we hopefully won't bother you again.
+Regards.

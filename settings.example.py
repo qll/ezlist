@@ -18,7 +18,7 @@ storage = SQLiteStorage(
 # inbox is used to load new mail
 inbox = IMAPInbox(
     host='imap.gmail.com',  # IMAP host (e.g. imap.gmail.com)
-    port=993,               # port of the IMAP service 
+    port=993,               # port of the IMAP service
     username='test',        # IMAP username
     password='test',        # IMAP password
     inbox='INBOX',          # name of the inbox folder (e.g. INBOX)
@@ -47,7 +47,8 @@ MANAGER = Manager(
     storage=storage,
     subject_prefix='[List]',     # how to prefix all mails on the list
     skip_sender=True,            # should a sender get his own email forwarded?
-    manage_subscriptions=True    # subscriptions/unsubscriptions allowed?
+    manage_subscriptions=True,    # subscriptions/unsubscriptions allowed?
+    default_language='tr'        # default language for automated emails
 )
 
 

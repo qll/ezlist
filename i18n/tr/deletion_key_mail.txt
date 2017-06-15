@@ -1,0 +1,4 @@
+Selamlar!
+{list} eposta listesini takip etmeyi bırakmak istiyorsanız bu epostayı konusunu değiştirmeden yanıtlamanız yeterlidir.
+Eğer böyle bir talebiniz bulunmuyorsa bu epostayı görmezden gelebilirsiniz.
+Teşekkürler
